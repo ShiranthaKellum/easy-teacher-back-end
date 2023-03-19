@@ -3,12 +3,15 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 
+const userRoutes = require("./routes/users");
+
 const app = express();
 const PORT = 5000;
 const URI = "mongodb://localhost:27017/easy-teacher";
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use("/users", userRoutes);
 
 mongoose.connect(URI, {
     useNewUrlParser: true
