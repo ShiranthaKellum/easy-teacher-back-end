@@ -1,8 +1,10 @@
 const express = require("express");
 const userRoutes = express.Router();
 const bcyrpt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const User = require("../models/user");
+const user = require("../models/user");
 
 userRoutes.route("/register").post((req, res) => {
   User.findOne({ email: req.body.email }).then((user) => {
@@ -36,17 +38,24 @@ userRoutes.route("/login").post((req, res) => {
   User.findOne({ email })
   .then(user => {
     if (user) {
-    //   if (password == user.password) {
-    //     return res.status(200).json({ message: "Login successful!" });
-    //   } else {
-    //     return res.status(200).json({ message: "Incorrect password!" });
-    //   }
-    // } else {
-    //   return res.status(200).json({ message: "Email not found!" });
+      const payload = {
+        id: user.id,
+        name: user.name
+      }
       bcyrpt.compare(password, user.password)
       .then(isMatch => {
         if (isMatch) {
-          return res.status(200).json({ "message": "Login successfull!" });
+          jwt.sign(
+            payload,
+            process.env.SECRET_KEY,
+            (err, token) => {
+              return res.json({
+                success: true,
+                token: "Bearer " + token,
+                message: "Login successfull!"
+              });
+            }
+          );
         } else {
           return res.status(200).json({ "message": "Incorrect password!" });
         }

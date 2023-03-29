@@ -2,18 +2,19 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+require("dotenv").config();
 
 const userRoutes = require("./routes/users");
 
 const app = express();
-const PORT = 5000;
-const URI = "mongodb://localhost:27017/easy-teacher";
+const port = process.env.PORT || 5000;
+const uri = process.env.DB_URI;
 
 app.use(cors());
 app.use(bodyParser.json());
 app.use("/users", userRoutes);
 
-mongoose.connect(URI, {
+mongoose.connect(uri, {
     useNewUrlParser: true
 });
 
@@ -23,6 +24,6 @@ connection.once("open", () => {
     console.log("Database is connected!");
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}!`);
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}!`);
 });
