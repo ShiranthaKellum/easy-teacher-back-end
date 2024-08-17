@@ -3,18 +3,29 @@ package com.example.easyteacher.controller;
 import com.example.easyteacher.model.ERole;
 import com.example.easyteacher.model.Role;
 import com.example.easyteacher.model.User;
+import com.example.easyteacher.payload.request.SigninRequest;
 import com.example.easyteacher.payload.request.SignupRequest;
+import com.example.easyteacher.payload.response.JwtResponse;
 import com.example.easyteacher.payload.response.MessageResponse;
 import com.example.easyteacher.repository.RoleRepository;
 import com.example.easyteacher.repository.UserRepository;
+import com.example.easyteacher.security.jwt.JwtUtils;
+import com.example.easyteacher.security.sevices.UserDetailsImpl;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -30,8 +41,14 @@ public class AuthController {
     @Autowired
     RoleRepository roleRepository;
 
+    @Autowired
+    AuthenticationManager authenticationManager;
+
+    @Autowired
+    JwtUtils jwtUtils;
+
     @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signupRequest) {
+    public ResponseEntity<?> signUp(@Valid @RequestBody SignupRequest signupRequest) {
 
         if (userRepository.existsByUsername(signupRequest.getUsername())) {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
@@ -53,8 +70,10 @@ public class AuthController {
         } else {
             strRoles.forEach(role -> {
                 switch (role) {
-                    case "admin": Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
+                    case "admin":
+                        Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
                             .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                        roles.add(adminRole);
                         break;
 
                     default:
@@ -68,6 +87,25 @@ public class AuthController {
         user.setRoles(roles);
         userRepository.save(user);
 
-        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+        return ResponseEntity.ok(new User(user.getId(), user.getUsername(), user.getEmail(), user.getRoles()));
+    }
+
+    @PostMapping("/signin")
+    public ResponseEntity<?> signIn(@Valid @RequestBody SigninRequest signinRequest) {
+
+        Authentication authentication = authenticationManager
+                .authenticate(new UsernamePasswordAuthenticationToken(signinRequest.getUsername(),
+                        signinRequest.getPassword()));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(),
+                userDetails.getEmail(), roles));
     }
 }
