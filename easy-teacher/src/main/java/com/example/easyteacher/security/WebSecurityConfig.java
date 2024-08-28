@@ -1,14 +1,17 @@
 package com.example.easyteacher.security;
 
-import com.example.easyteacher.security.services.UserDetailsServiceImpl;
+import com.example.easyteacher.security.jwt.AuthEntryPointJwt;
+import com.example.easyteacher.security.jwt.AuthTokenFilter;
+import com.example.easyteacher.security.sevices.UserDetailsServiceImpl;
+import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,10 +19,12 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableMethodSecurity
+@EnableWebSecurity
 public class WebSecurityConfig {
+
     @Autowired
     UserDetailsServiceImpl userDetailsService;
+
     @Autowired
     private AuthEntryPointJwt unauthorizedHandler;
 
@@ -31,7 +36,6 @@ public class WebSecurityConfig {
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
 
@@ -39,13 +43,14 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    @SneakyThrows
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) {
+        return authConfig.getAuthenticationManager();
     }
 
     @Bean
